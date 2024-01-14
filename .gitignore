@@ -1,0 +1,7 @@
+/target
+cli/target
+server/target
+
+.env
+/server/.env
+/cli/.env
