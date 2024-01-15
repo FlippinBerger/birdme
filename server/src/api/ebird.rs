@@ -1,3 +1,7 @@
+use rand::Rng;
+use serde::Deserialize;
+use std::collections::HashSet;
+
 const BASE_URL: &str = "https://api.ebird.org/v2/";
 const KEY_HEADER: &str = "x-ebirdapitoken";
 
@@ -6,10 +10,27 @@ pub struct EbirdService {
     client: reqwest::Client,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TaxonomyResponse {
+    sci_name: String,
+    com_name: String,
+    species_code: String,
+    category: String,
+    taxon_order: f32,
+    banding_codes: Vec<String>,
+    com_name_codes: Vec<String>,
+    sci_name_codes: Vec<String>,
+    order: String,
+    family_code: String,
+    family_com_name: String,
+    family_sci_name: String,
+}
+
 pub struct Bird {
-    name: String,
-    family_name: String,
-    scientific_name: String,
+    pub name: String,
+    pub family_name: String,
+    pub scientific_name: String,
 }
 
 impl EbirdService {
@@ -19,15 +40,13 @@ impl EbirdService {
         Self { token, client }
     }
 
-    pub async fn get_birds(&self) -> Bird {
+    pub async fn get_birds(&self) -> Vec<Bird> {
         let species_codes = self.get_species_codes_for_region("US-CO").await;
-        println!("species codes are: {:?}", species_codes);
 
-        Bird {
-            name: String::from("sparrow"),
-            family_name: String::from("sparrow"),
-            scientific_name: String::from("sparrow"),
-        }
+        // choose a few random species to return to the user
+        let codes = choose_random_codes(&species_codes, 5);
+
+        self.get_taxonomy_for_codes(&codes).await
     }
 
     // for some reason, the species codes are returned as plain text from the API
@@ -65,4 +84,69 @@ impl EbirdService {
 
         v
     }
+
+    async fn get_taxonomy_for_codes(&self, species_codes: &Vec<String>) -> Vec<Bird> {
+        let codes = species_codes.join(",");
+
+        let birds = match self
+            .client
+            .get(format!("{}ref/taxonomy/ebird", BASE_URL))
+            .header(KEY_HEADER, &self.token)
+            .query(&[("species", codes)])
+            .query(&[("fmt", "json")])
+            .send()
+            .await
+            .expect("didn't error grabbing the taxonomy")
+            .json::<Vec<TaxonomyResponse>>()
+            .await
+        {
+            Ok(taxes) => taxes
+                .iter()
+                .map(|tax| Bird {
+                    name: tax.com_name.clone(),
+                    family_name: tax.family_com_name.clone(),
+                    scientific_name: tax.sci_name.clone(),
+                })
+                .collect(),
+            Err(err) => {
+                println!("Oops we failed fetching the taxonomies: {}", err);
+                vec![]
+            }
+        };
+
+        birds
+    }
+}
+
+// choose_random_codes utilizes a random number generator to snag some random
+// species codes to show the user
+fn choose_random_codes(species_codes: &Vec<String>, number_to_choose: u8) -> Vec<String> {
+    let mut codes: Vec<String> = Vec::new();
+    let mut rng = rand::thread_rng();
+    let mut set = HashSet::new();
+
+    let max_counter = 100;
+    let mut kill_it = false;
+
+    for _ in 0..number_to_choose {
+        let mut i = 0;
+        loop {
+            let random_number = rng.gen_range(0..species_codes.len());
+            if !set.contains(&random_number) {
+                set.insert(random_number);
+                codes.push(String::from(&species_codes[random_number]));
+                break;
+            }
+            i += 1;
+            if i >= max_counter {
+                kill_it = true;
+                break;
+            }
+        }
+        if kill_it {
+            break;
+        }
+    }
+
+    codes
 }

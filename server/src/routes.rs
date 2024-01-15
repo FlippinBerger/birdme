@@ -12,9 +12,14 @@ pub struct Bird {
 
 #[get("/birds")]
 pub async fn get_birds(config: &State<ServiceConfig>) -> Json<Vec<Bird>> {
-    let _ = config.ebird.get_birds().await;
-    Json(vec![Bird {
-        name: String::from("American Robin"),
-        scientific_name: String::from("blah"),
-    }])
+    let birds = config.ebird.get_birds().await;
+    Json(
+        birds
+            .iter()
+            .map(|bird| Bird {
+                name: bird.name.clone(),
+                scientific_name: bird.scientific_name.clone(),
+            })
+            .collect(),
+    )
 }
