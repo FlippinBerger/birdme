@@ -14,10 +14,16 @@ fn world() -> &'static str {
 #[launch]
 fn rocket() -> _ {
     println!("Running birdme server...");
-    dotenv().ok();
+    // dotenv().ok();
+    let _ = match dotenv() {
+        Ok(_) => (),
+        Err(e) => println!("dotenv failed {:?}", e),
+    };
+
+    let config = config::ServiceConfig::new().unwrap();
 
     rocket::build()
-        .manage(config::ServiceConfig::new())
+        .manage(config)
         .mount("/", routes![world])
         .mount("/", routes![routes::get_birds])
 }

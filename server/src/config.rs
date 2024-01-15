@@ -1,8 +1,8 @@
 use server::api::{ebird::EbirdService, wiki::WikiService};
 
 pub struct ServiceConfig {
-    wiki: WikiService,
-    ebird: EbirdService,
+    pub wiki: WikiService,
+    pub ebird: EbirdService,
 }
 
 // read environment variables to stick into the different services here to be
@@ -19,9 +19,7 @@ impl ServiceConfig {
                 client_id: wiki_client_id,
                 client_secret: wiki_client_secret,
             },
-            ebird: EbirdService {
-                token: ebird_api_key,
-            },
+            ebird: EbirdService::new(ebird_api_key),
         })
     }
 }
