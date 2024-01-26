@@ -1,18 +1,13 @@
 use dotenv::dotenv;
+use server::config;
 
-mod config;
 mod routes;
 
 #[macro_use]
 extern crate rocket;
 
-#[get("/")]
-fn world() -> &'static str {
-    "Hello, world!"
-}
-
 #[launch]
-fn rocket() -> _ {
+async fn rocket() -> _ {
     println!("Running birdme server...");
     // dotenv().ok();
     let _ = match dotenv() {
@@ -20,10 +15,12 @@ fn rocket() -> _ {
         Err(e) => println!("dotenv failed {:?}", e),
     };
 
-    let config = config::ServiceConfig::new().unwrap();
+    let config = config::ServiceConfig::new().await.unwrap();
+
+    let limiter = server::rate_limiter::RateLimiter::new(5);
 
     rocket::build()
         .manage(config)
-        .mount("/", routes![world])
+        .manage(limiter)
         .mount("/", routes![routes::get_birds])
 }

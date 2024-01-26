@@ -35,13 +35,14 @@ pub struct Bird {
 
 impl EbirdService {
     pub fn new(token: String) -> Self {
-        let client = reqwest::Client::new();
-
-        Self { token, client }
+        Self {
+            token,
+            client: reqwest::Client::new(),
+        }
     }
 
-    pub async fn get_birds(&self) -> Vec<Bird> {
-        let species_codes = self.get_species_codes_for_region("US-CO").await;
+    pub async fn get_birds(&self, region: &str) -> Vec<Bird> {
+        let species_codes = self.get_species_codes_for_region(region).await;
 
         // choose a few random species to return to the user
         let codes = choose_random_codes(&species_codes, 5);
