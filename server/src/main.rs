@@ -19,7 +19,9 @@ async fn rocket() -> _ {
 
     let limiter = server::rate_limiter::RateLimiter::new(5);
 
-    let logger = server::logger::Logger::new("loggyboi.txt".to_owned(), 10);
+    // TODO if and when traffic gets higher, separate into log files sorted
+    // by a time cutoff (monthly, weekly, daily e.g.)
+    let logger = server::logger::Logger::new("log.txt".to_owned(), 100);
 
     rocket::build()
         .manage(config)
