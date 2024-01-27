@@ -1,4 +1,5 @@
 use chrono::Utc;
+use std::io::Write;
 use std::path::PathBuf;
 use std::{fs, io};
 
@@ -28,9 +29,20 @@ impl Logger {
 
     // flush writes all stored logs to the log file
     pub fn flush(&mut self) -> Result<(), io::Error> {
+        let mut log_file = fs::OpenOptions::new()
+            .append(true)
+            .open(&self.log_path)
+            .expect("cannot open log file");
+
         for s in self.buf.iter() {
             println!("{}", s);
+
+            log_file
+                .write(s.as_bytes())
+                .expect("writing to log file failed");
         }
+
+        self.buf.clear();
 
         Ok(())
     }
