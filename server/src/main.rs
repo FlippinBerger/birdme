@@ -19,8 +19,11 @@ async fn rocket() -> _ {
 
     let limiter = server::rate_limiter::RateLimiter::new(5);
 
+    let logger = server::logger::Logger::new("loggyboi.txt".to_owned(), 10);
+
     rocket::build()
         .manage(config)
         .manage(limiter)
+        .manage(logger)
         .mount("/", routes![routes::get_birds])
 }

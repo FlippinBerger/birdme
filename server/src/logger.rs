@@ -1,20 +1,21 @@
-use chrono::{DateTime, Utc};
-use std::io;
+use chrono::Utc;
+use std::path::PathBuf;
+use std::{fs, io};
 
 pub struct Logger {
-    file_name: String,
+    log_path: PathBuf,
     buf: RingBuffer,
-}
-
-pub enum LoggerType {
-    File,
 }
 
 impl Logger {
     pub fn new(file_name: String, buffer_size: usize) -> Self {
         let buf = RingBuffer::new(buffer_size);
 
-        Self { file_name, buf }
+        // check for log directory at project root
+        let log_path = get_or_create_log_dir().join(file_name);
+        fs::write(&log_path, "").expect("should be able to create log file");
+
+        Self { log_path, buf }
     }
 
     // log stores a log string to later be written to the log file
@@ -33,6 +34,21 @@ impl Logger {
 
         Ok(())
     }
+}
+
+fn get_or_create_log_dir() -> PathBuf {
+    let log_path = std::env::current_dir().unwrap().join(".logs");
+
+    match log_path.try_exists() {
+        Ok(v) => {
+            if !v {
+                fs::create_dir(log_path.clone()).expect("directory creation should work");
+            }
+        }
+        Err(_) => fs::create_dir(log_path.clone()).expect("dir creation should work"),
+    }
+
+    log_path
 }
 
 // RingBuffer is a simple ring buffer where the underlying vector gets filled
